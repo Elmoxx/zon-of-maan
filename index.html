@@ -229,7 +229,10 @@
       };
 
       function puzzleUrl(id) {
-        const url = new URL(window.location.href);
+        const baseUrl = location.protocol === 'http:' || location.protocol === 'https:'
+          ? window.location.href
+          : 'https://elmoxx.github.io/zon-of-maan/';
+        const url = new URL(baseUrl);
         url.search = '';
         url.hash = '';
         url.searchParams.set('p', String(id));
@@ -621,15 +624,12 @@
       async function shareResult() {
         if (!state.completed) return;
         const link = puzzleUrl(state.puzzle);
-        const isHosted = location.protocol === 'https:' || location.protocol === 'http:';
         const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
-        const shareText = isHosted
-          ? `${resultText}\nDenk je dat je sneller bent? Speel dezelfde puzzel: ${link}`
-          : `${resultText}\nOpen hetzelfde Zon of maan-bestand en laad puzzelnummer ${state.puzzle} om dezelfde puzzel te spelen.`;
+        const shareText = `${resultText}\nDenk je dat je sneller bent? Speel dezelfde puzzel: ${link}`;
         const message = shareText;
         try {
           if (navigator.share) {
-            await navigator.share({ title: 'Zon of maan — puzzeluitdaging', text: shareText, ...(isHosted ? { url: link } : {}) });
+            await navigator.share({ title: 'Zon of maan — puzzeluitdaging', text: shareText });
             status.className = 'status good';
             status.textContent = 'Uitslag gedeeld.';
           } else {
