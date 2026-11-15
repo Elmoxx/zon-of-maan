@@ -6,6 +6,16 @@
   <meta name="theme-color" content="#f6f5f0">
   <meta name="description" content="Speel een kort en leuk logicapuzzeltje met zon en maan. Kies makkelijk of moeilijk, deel je succes en daag iemand uit voor dezelfde puzzel.">
   <title>☀️ Zon of maan 🌙 Logicapuzzel, veel plezier!</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-94LT11B5H2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){window.dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-94LT11B5H2', {
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false
+    });
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -104,6 +114,8 @@
     .puzzle-load-help { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; text-align: center; }
     .puzzle-load-help strong { color: var(--ink); font-weight: 850; }
     .puzzle-load { display: flex; align-items: center; gap: 5px; padding: 3px 4px; border: 1px solid var(--line); border-radius: 12px; background: #f7f8f3; }
+    .site-footer { margin: 18px 0 0; color: var(--muted); text-align: center; font-size: 13px; }
+    .site-footer a { color: var(--green); font-weight: 700; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .puzzle-load input { width: 100px; min-width: 0; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 12px; }
     .puzzle-load .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
@@ -132,7 +144,7 @@
   <div class="page">
     <header>
       <div class="brand"><span class="brand-mark" aria-hidden="true">☼</span><span>Zon of maan</span></div>
-      <span class="tag">Een klein dagelijks denkspel (v0.1.4)</span>
+      <span class="tag">Een klein dagelijks denkspel (v0.1.5)</span>
     </header>
     <main>
       <section class="card game" aria-labelledby="title">
@@ -180,6 +192,7 @@
         <p class="tip">Tip: klik een vakje meerdere keren om te wisselen: leeg → zon → maan → leeg. Je kunt ook de pijltoetsen en spatiebalk gebruiken.</p>
       </aside>
     </main>
+    <footer class="site-footer"><a href="over.html">Over Zon of maan</a></footer>
     <dialog class="success-dialog" id="success-dialog" aria-labelledby="success-title" aria-describedby="success-message">
       <div class="success-content">
         <span class="success-icon" aria-hidden="true">🎉</span>
@@ -204,7 +217,7 @@
         if (row.some((v, i) => i > 1 && v === row[i - 1] && v === row[i - 2])) continue;
         patterns.push(row);
       }
-      const state = { puzzle: 0, level: 'easy', solution: [], given: [], values: [], links: [], seconds: 0, timer: null, hintAvailableAt: 0, hintTimer: null, liveMessageTimer: null, invalidTimer: null, completed: false };
+      const state = { puzzle: 0, level: 'easy', solution: [], given: [], values: [], links: [], seconds: 0, timer: null, hintAvailableAt: 0, hintTimer: null, liveMessageTimer: null, invalidTimer: null, completed: false, hintsUsed: 0, moves: 0, checks: 0 };
       const board = document.querySelector('#board');
       const status = document.querySelector('#status');
       const successDialog = document.querySelector('#success-dialog');
@@ -212,6 +225,9 @@
       const levelNames = { easy: 'Makkelijk', medium: 'Gemiddeld', hard: 'Pittig' };
       const maxPuzzleNumber = 4294967295;
       let randomState = 1;
+      function trackEvent(name, params = {}) {
+        if (typeof gtag === 'function') gtag('event', name, params);
+      }
       function seedRandom(seed) { randomState = (seed >>> 0) || 0x6d2b79f5; }
       function random() {
         randomState ^= randomState << 13;
@@ -333,7 +349,7 @@
         }
       }
 
-      function newPuzzle(puzzleNumber) {
+      function newPuzzle(puzzleNumber, startType = 'next') {
         if (successDialog.open) successDialog.close();
         clearTimeout(state.liveMessageTimer);
         state.liveMessageTimer = null;
@@ -344,6 +360,9 @@
         showSelectedLevel();
         seedRandom(state.puzzle);
         state.completed = false;
+        state.hintsUsed = 0;
+        state.moves = 0;
+        state.checks = 0;
         state.solution = makeSolution();
         state.values = Array.from({ length: N }, () => Array(N).fill(-1));
         const clues = { easy: 16, medium: 12, hard: 9 }[state.level];
@@ -376,6 +395,11 @@
         status.className = 'status';
         status.textContent = 'Zet je eerste zon of maan.';
         render();
+        trackEvent('puzzle_start', {
+          puzzle_id: state.puzzle,
+          difficulty: state.level,
+          start_type: startType
+        });
       }
 
       function render() {
@@ -403,6 +427,7 @@
             button.disabled = state.given[r][c];
             button.style.gridRow = String(r * 2 + 1); button.style.gridColumn = String(c * 2 + 2);
             button.addEventListener('click', () => {
+              state.moves++;
               state.values[r][c] = state.values[r][c] === 1 ? -1 : state.values[r][c] + 1;
               status.className = 'status'; status.textContent = 'Puzzel loopt. Je kunt op elk moment controleren.';
               render(); board.querySelector(`[aria-label^="Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}:"]`)?.focus();
@@ -501,6 +526,8 @@
       }
 
       function check() {
+        const wasCompleted = state.completed;
+        state.checks++;
         const issues = [];
         for (let r = 0; r < N; r++) {
           const row = state.values[r];
@@ -519,6 +546,7 @@
         }
         const filled = state.values.flat().every(x => x >= 0);
         if (issues.length) {
+          if (!wasCompleted) trackEvent('puzzle_check', { puzzle_id: state.puzzle, difficulty: state.level, result: 'invalid' });
           status.className = 'status error'; status.textContent = `Nog niet: ${issues[0]}. Kijk ook naar de roze vakjes.`;
           state.values.forEach((row, r) => row.forEach((value, c) => {
             const cell = board.querySelector(`[aria-label^="Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}:"]`);
@@ -528,15 +556,25 @@
             cell.classList.toggle('wrong', rowTrip || colTrip);
           }));
         } else if (filled) {
+          if (!wasCompleted) trackEvent('puzzle_check', { puzzle_id: state.puzzle, difficulty: state.level, result: 'solved' });
           clearInterval(state.timer);
           status.className = 'status good'; status.textContent = `Helemaal goed! Opgelost in ${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, '0')}. Lekker bezig!`;
           if (!state.completed) {
             state.completed = true;
+            trackEvent('puzzle_solved', {
+              puzzle_id: state.puzzle,
+              difficulty: state.level,
+              solve_time_seconds: state.seconds,
+              hint_count: state.hintsUsed,
+              move_count: state.moves,
+              check_count: state.checks
+            });
             document.querySelector('#share-result').hidden = false;
             document.querySelector('#success-message').textContent = `Je hebt alle vakjes goed ingevuld in ${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, '0')}.`;
             successDialog.showModal();
           }
         } else {
+          if (!wasCompleted) trackEvent('puzzle_check', { puzzle_id: state.puzzle, difficulty: state.level, result: 'incomplete' });
           status.className = 'status'; status.textContent = 'Tot nu toe klopt alles. Vul de rest van het bord in!';
         }
       }
@@ -594,6 +632,12 @@
           return;
         }
         const { r, c, explanation } = candidates[Math.floor(Math.random() * candidates.length)];
+        state.hintsUsed++;
+        trackEvent('hint_used', {
+          puzzle_id: state.puzzle,
+          difficulty: state.level,
+          hint_number: state.hintsUsed
+        });
         state.values[r][c] = state.solution[r][c];
         render();
         status.className = 'status';
@@ -629,6 +673,7 @@
 
       async function shareResult() {
         if (!state.completed) return;
+        trackEvent('share_attempt', { puzzle_id: state.puzzle, difficulty: state.level });
         const link = puzzleUrl(state.puzzle);
         const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
         const shareText = `${resultText}\nDenk je dat je sneller bent?\nSpeel dezelfde puzzel: ${link}`;
@@ -636,28 +681,35 @@
         try {
           if (navigator.share) {
             await navigator.share({ text: shareText });
+            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'native' });
             status.className = 'status good';
             status.textContent = 'Uitslag gedeeld.';
           } else {
             await navigator.clipboard.writeText(message);
+            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'clipboard' });
             status.className = 'status good';
             status.textContent = 'Uitslag gekopieerd om te delen.';
           }
         } catch (error) {
-          if (error.name === 'AbortError') return;
+          if (error.name === 'AbortError') {
+            trackEvent('share_cancelled', { puzzle_id: state.puzzle, difficulty: state.level });
+            return;
+          }
           try {
             await navigator.clipboard.writeText(message);
+            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'clipboard_fallback' });
             status.className = 'status good';
             status.textContent = 'Uitslag gekopieerd om te delen.';
           } catch (_) {
+            trackEvent('share_fallback_shown', { puzzle_id: state.puzzle, difficulty: state.level });
             window.prompt('Kopieer je uitslag om te delen:', message);
           }
         }
       }
 
       document.querySelector('#check').addEventListener('click', check);
-      document.querySelector('#new-puzzle').addEventListener('click', () => newPuzzle());
-      document.querySelector('#restart-puzzle').addEventListener('click', () => newPuzzle(state.puzzle));
+      document.querySelector('#new-puzzle').addEventListener('click', () => newPuzzle(undefined, 'next'));
+      document.querySelector('#restart-puzzle').addEventListener('click', () => newPuzzle(state.puzzle, 'restart'));
       document.querySelector('#share-result').addEventListener('click', shareResult);
       document.querySelector('#success-share').addEventListener('click', shareResult);
       document.querySelector('#load-puzzle-form').addEventListener('submit', event => {
@@ -667,15 +719,15 @@
           status.className = 'status error'; status.textContent = 'Vul een puzzelnummer in tussen 1 en 4.294.967.295.';
           return;
         }
-        newPuzzle(puzzleNumber);
+        newPuzzle(puzzleNumber, 'selected');
       });
       document.querySelector('#success-close').addEventListener('click', () => successDialog.close());
-      document.querySelector('#success-next').addEventListener('click', () => newPuzzle());
+      document.querySelector('#success-next').addEventListener('click', () => newPuzzle(undefined, 'next_after_solve'));
       document.querySelector('#hint').addEventListener('click', giveHint);
       document.querySelectorAll('[data-level]').forEach(button => button.addEventListener('click', () => {
         state.level = button.dataset.level;
         document.querySelectorAll('[data-level]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-        newPuzzle();
+        newPuzzle(undefined, 'difficulty_change');
       }));
       document.addEventListener('keydown', event => {
         if (event.key !== ' ' || !event.target.classList.contains('tile') || event.target.disabled) return;
@@ -683,7 +735,7 @@
       });
       const requestedPuzzle = new URLSearchParams(location.search).get('p');
       const initialPuzzle = requestedPuzzle && /^\d+$/.test(requestedPuzzle) ? Number(requestedPuzzle) : 1;
-      newPuzzle(Number.isSafeInteger(initialPuzzle) && initialPuzzle >= 1 && initialPuzzle <= 4294967295 ? initialPuzzle : 1);
+      newPuzzle(Number.isSafeInteger(initialPuzzle) && initialPuzzle >= 1 && initialPuzzle <= 4294967295 ? initialPuzzle : 1, 'initial');
     })();
   </script>
 </body>
