@@ -56,7 +56,7 @@
     .board-labels span:first-child { grid-column: 1; }
     .board-grid { display: grid; grid-template-columns: var(--label-size) repeat(5, var(--cell-size) var(--gap-size)) var(--cell-size); grid-template-rows: repeat(5, var(--cell-size) var(--gap-size)) var(--cell-size); align-items: center; justify-items: center; }
     .row-label { color: #849087; font-size: 11px; font-weight: 700; }
-    .tile { width: calc(var(--cell-size) - 2px); height: calc(var(--cell-size) - 2px); display: grid; place-items: center; border: 1px solid #e6e9e0; border-radius: 13px; background: #fffefa; color: var(--ink); cursor: pointer; touch-action: manipulation; transition: transform .12s, box-shadow .12s, background .12s; }
+    .tile { width: calc(var(--cell-size) - 2px); height: calc(var(--cell-size) - 2px); display: grid; place-items: center; border: 1px solid #e6e9e0; border-radius: 13px; background: #fffefa; color: var(--ink); cursor: pointer; touch-action: manipulation; transition: transform .12s, box-shadow .3s ease, background .3s ease, border-color .3s ease; }
     .tile:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 13px #2e4c3c1a; }
     .tile:focus-visible, button:focus-visible { outline: 3px solid #79ad95; outline-offset: 2px; }
     .tile.given { position: relative; background: #e9eee8; border: 2px solid #648d77; cursor: default; }
@@ -204,7 +204,7 @@
         if (row.some((v, i) => i > 1 && v === row[i - 1] && v === row[i - 2])) continue;
         patterns.push(row);
       }
-      const state = { puzzle: 0, level: 'easy', solution: [], given: [], values: [], links: [], seconds: 0, timer: null, hintAvailableAt: 0, hintTimer: null, liveMessageTimer: null, completed: false };
+      const state = { puzzle: 0, level: 'easy', solution: [], given: [], values: [], links: [], seconds: 0, timer: null, hintAvailableAt: 0, hintTimer: null, liveMessageTimer: null, invalidTimer: null, completed: false };
       const board = document.querySelector('#board');
       const status = document.querySelector('#status');
       const successDialog = document.querySelector('#success-dialog');
@@ -337,6 +337,8 @@
         if (successDialog.open) successDialog.close();
         clearTimeout(state.liveMessageTimer);
         state.liveMessageTimer = null;
+        clearTimeout(state.invalidTimer);
+        state.invalidTimer = null;
         state.puzzle = puzzleNumber ?? nextPuzzleNumber();
         state.level = levelForPuzzleNumber(state.puzzle);
         showSelectedLevel();
@@ -475,17 +477,21 @@
       function showImmediateFeedback() {
         clearTimeout(state.liveMessageTimer);
         state.liveMessageTimer = null;
+        clearTimeout(state.invalidTimer);
+        state.invalidTimer = null;
         board.querySelectorAll('.tile.invalid').forEach(cell => cell.classList.remove('invalid'));
         const issues = immediateIssues();
-        for (const issue of issues) {
-          for (const [r, c] of issue.cells) {
-            if (!state.given[r][c]) board.querySelector(cellSelector(r, c))?.classList.add('invalid');
-          }
-        }
         if (!issues.length) return;
         const message = issues[0].message;
         status.className = 'status error';
         status.textContent = message;
+        const invalidCells = issues.flatMap(issue => issue.cells);
+        state.invalidTimer = setTimeout(() => {
+          for (const [r, c] of invalidCells) {
+            if (!state.given[r][c]) board.querySelector(cellSelector(r, c))?.classList.add('invalid');
+          }
+          state.invalidTimer = null;
+        }, 500);
         state.liveMessageTimer = setTimeout(() => {
           if (status.textContent === message) {
             status.className = 'status';
