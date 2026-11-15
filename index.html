@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <meta name="description" content="Speel zelfgemaakte Tango-logicapuzzels. Gratis, zonder account en offline te gebruiken.">
+  <title>Zon of maan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --cell-size: 58px;
+      --gap-size: 9px;
+      --label-size: 25px;
+      --ink: #202b28;
+      --muted: #71807a;
+      --paper: #f6f5f0;
+      --card: #fffefa;
+      --line: #e6e8df;
+      --green: #176c58;
+      --green-soft: #e7f2ec;
+      --sun: #e9a92d;
+      --moon: #637bb1;
+      --bad: #bb564c;
+      font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", Avenir, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--paper);
+      background-image: radial-gradient(#d9ded4 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+    }
+    .page { width: min(100% - 32px, 1040px); margin: 0 auto; padding: 32px 0 48px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+    .brand { display: flex; gap: 11px; align-items: center; font-weight: 800; letter-spacing: -.04em; font-size: 21px; }
+    .brand-mark { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 13px; background: #dcece3; color: var(--green); font-size: 22px; }
+    .tag { color: var(--muted); font-size: 13px; font-weight: 650; }
+    main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .8fr); gap: 20px; align-items: start; }
+    .card { background: var(--card); border: 1px solid rgba(45, 64, 55, .09); border-radius: 24px; box-shadow: 0 12px 36px rgba(43, 59, 48, .07); }
+    .game { padding: 27px; }
+    .side { padding: 24px; }
+    .eyebrow { margin: 0 0 8px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); letter-spacing: -.055em; line-height: 1.08; }
+    .intro { margin: 11px 0 22px; color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .level { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #f1f2ed; }
+    .level button { border: 0; background: transparent; border-radius: 9px; padding: 8px 10px; color: #69756f; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .level button[aria-pressed="true"] { color: var(--green); background: white; box-shadow: 0 1px 4px #263a3017; }
+    .meta { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .meta strong { color: var(--ink); font-weight: 850; }
+    .board-wrap { width: max-content; max-width: 100%; margin: 0 auto; padding: 15px 20px 17px 25px; border-radius: 18px; background: #f5f6f0; }
+    .board-labels { display: grid; grid-template-columns: var(--label-size) repeat(5, var(--cell-size) var(--gap-size)) var(--cell-size); width: max-content; margin-bottom: 7px; color: #849087; font-size: 11px; font-weight: 700; text-align: center; }
+    .board-labels span:first-child { grid-column: 1; }
+    .board-grid { display: grid; grid-template-columns: var(--label-size) repeat(5, var(--cell-size) var(--gap-size)) var(--cell-size); grid-template-rows: repeat(5, var(--cell-size) var(--gap-size)) var(--cell-size); align-items: center; justify-items: center; }
+    .row-label { color: #849087; font-size: 11px; font-weight: 700; }
+    .tile { width: calc(var(--cell-size) - 2px); height: calc(var(--cell-size) - 2px); display: grid; place-items: center; border: 1px solid #e6e9e0; border-radius: 13px; background: #fffefa; color: var(--ink); cursor: pointer; touch-action: manipulation; transition: transform .12s, box-shadow .12s, background .12s; }
+    .tile:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 13px #2e4c3c1a; }
+    .tile:focus-visible, button:focus-visible { outline: 3px solid #79ad95; outline-offset: 2px; }
+    .tile.given { position: relative; background: #e9eee8; border: 2px solid #648d77; cursor: default; }
+    .tile.sun { color: #bd7910; background: #fff5dc; border-color: #f1dfb6; }
+    .tile.moon { color: #425b91; background: #edf1fc; border-color: #d8e0f4; }
+    .tile.given.sun { background: #f8eac5; border-color: #648d77; }
+    .tile.given.moon { background: #dfe6f7; border-color: #648d77; }
+    .tile-icon { display: block; width: min(34px, calc(var(--cell-size) * .62)); height: min(34px, calc(var(--cell-size) * .62)); }
+    .tile.wrong { background: #fae9e5; border-color: #e7a29a; }
+    .tile.invalid { background: #fae9e5 !important; border-color: #bb564c !important; box-shadow: 0 0 0 2px #bb564c35; }
+    .constraint { z-index: 1; display: grid; place-items: center; width: 14px; height: 18px; color: var(--green); font-size: 12px; font-weight: 900; line-height: 1; }
+    .constraint.different { color: #ad7350; font-size: 16px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-top: 20px; }
+    .btn { min-height: 42px; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; transition: transform .12s, background .12s; }
+    .btn:hover { transform: translateY(-1px); background: #f8faf6; }
+    .btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
+    .btn.primary { border-color: var(--green); background: var(--green); color: white; }
+    .btn.primary:hover { background: #105943; }
+    .status { min-height: 24px; margin: 13px 0 0; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.5; }
+    .status.good { color: var(--green); font-weight: 750; }
+    .status.error { color: var(--bad); font-weight: 700; }
+    .side h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: -.03em; }
+    .side p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .rule { display: flex; gap: 12px; align-items: flex-start; padding: 13px 0; border-top: 1px solid var(--line); }
+    .rule-icon { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 15px; font-weight: 800; }
+    .rule strong { display: block; margin: 0 0 3px; font-size: 13px; }
+    .rule p { font-size: 12px; line-height: 1.5; }
+    .legend { display: flex; gap: 14px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .legend b { color: var(--sun); font-size: 17px; }
+    .legend span:last-child b { color: var(--moon); }
+    .fixed-legend { display: flex; gap: 9px; align-items: center; margin-top: 13px; color: #52665b; font-size: 12px; font-weight: 650; }
+    .fixed-sample { display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid #648d77; border-radius: 9px; background: #e9eee8; }
+    .tip { margin-top: 17px !important; padding: 12px; border-radius: 12px; background: #f6f5ed; font-size: 12px !important; }
+    .success-dialog { width: min(420px, calc(100% - 32px)); padding: 0; overflow: visible; border: 0; border-radius: 24px; color: var(--ink); background: var(--card); box-shadow: 0 24px 80px #1f302b40; }
+    .success-dialog::backdrop { background: #15231ecc; backdrop-filter: blur(3px); }
+    .success-content { padding: 30px; text-align: center; }
+    .success-icon { display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 20px; background: #fff2d2; font-size: 32px; }
+    .success-content .eyebrow { margin-bottom: 7px; }
+    .success-content h2 { margin: 0; font-size: 34px; letter-spacing: -.06em; }
+    .success-content p:not(.eyebrow) { margin: 9px 0 21px; color: var(--muted); line-height: 1.5; }
+    .success-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+    .puzzle-tools { display: grid; justify-items: center; gap: 5px; margin-top: 12px; }
+    .puzzle-control-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+    .puzzle-load-help { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; text-align: center; }
+    .puzzle-load-help strong { color: var(--ink); font-weight: 850; }
+    .puzzle-load { display: flex; align-items: center; gap: 5px; padding: 3px 4px; border: 1px solid var(--line); border-radius: 12px; background: #f7f8f3; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .puzzle-load input { width: 100px; min-width: 0; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 12px; }
+    .puzzle-load .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+    @media (max-width: 760px) {
+      :root { --cell-size: min(48px, calc(16.6667vw - 19.17px)); --gap-size: 6px; --label-size: 20px; }
+      .page { width: min(100% - 16px, 520px); padding-top: 8px; }
+      header { display: none; }
+      main { grid-template-columns: 1fr; gap: 14px; }
+      .game { padding: 12px 9px; }
+      .side { padding: 21px; }
+      .eyebrow, .intro { display: none; }
+      h1 { font-size: clamp(23px, 7vw, 30px); }
+      .toolbar { margin: 8px 2px 10px; }
+      .board-wrap { padding: 7px 5px 9px; }
+      .board-labels { margin-bottom: 4px; }
+      .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+      .actions .btn { min-width: 0; min-height: 44px; padding: 4px 3px; font-size: 11px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+      .status { margin-top: 9px; }
+      main { gap: 10px; }
+      .success-content { padding: 25px 18px; }
+      .success-content h2 { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">☼</span><span>Zon of maan</span></div>
+      <span class="tag">Een klein dagelijks denkspel (v0.1.0)</span>
+    </header>
+    <main>
+      <section class="card game" aria-labelledby="title">
+        <p class="eyebrow">Jouw puzzel</p>
+        <h1 id="title">Zon of maan?</h1>
+        <p class="intro">Vul het bord in en gebruik de aanwijzingen tussen de vakjes. Klik op een leeg vakje om een zon, maan of weer leeg te maken.</p>
+        <div class="toolbar">
+          <div class="level" role="group" aria-label="Moeilijkheid">
+            <button type="button" data-level="easy" aria-pressed="true">Makkelijk</button>
+            <button type="button" data-level="medium" aria-pressed="false">Gemiddeld</button>
+            <button type="button" data-level="hard" aria-pressed="false">Pittig</button>
+          </div>
+          <span class="meta" id="puzzle-number">Puzzel nr. <strong id="puzzle-number-value">1</strong> · Makkelijk · 6 × 6 · één oplossing</span>
+        </div>
+        <div class="board-wrap">
+          <div class="board-labels" id="column-labels" aria-hidden="true"></div>
+          <div class="board-grid" id="board" role="group" aria-label="Tango puzzelbord"></div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="check" type="button">Controleer</button>
+          <button class="btn" id="hint" type="button">Geef een hint</button>
+          <button class="btn" id="restart-puzzle" type="button">Overnieuw</button>
+        </div>
+        <p class="status" id="status" aria-live="polite">Zet je eerste zon of maan.</p>
+        <div class="puzzle-tools">
+          <div class="puzzle-control-row">
+            <button class="btn" id="new-puzzle" type="button">Nieuwe puzzel ↻</button>
+            <form class="puzzle-load" id="load-puzzle-form">
+              <label class="sr-only" for="puzzle-id">Puzzelnummer om te laden</label>
+              <input id="puzzle-id" type="number" min="1" max="4294967295" step="1" inputmode="numeric" placeholder="Puzzelnummer" required>
+              <button class="btn" type="submit">Laad</button>
+            </form>
+          </div>
+          <p class="puzzle-load-help">Dit is puzzel nr. <strong id="puzzle-load-help-number">1</strong>. Vul een ander nummer in en kies Laad om die puzzel te openen.</p>
+          <button class="btn" id="share-result" type="button" hidden>Deel uitslag</button>
+        </div>
+      </section>
+      <aside class="card side">
+        <h2>De regels</h2>
+        <div class="rule"><span class="rule-icon">☼</span><div><strong>Evenveel van allebei</strong><p>Elke rij en kolom heeft drie zonnen en drie manen.</p></div></div>
+        <div class="rule"><span class="rule-icon">Ⅱ</span><div><strong>Nooit drie op een rij</strong><p>Er mogen horizontaal of verticaal geen drie gelijke symbolen naast elkaar staan.</p></div></div>
+        <div class="rule"><span class="rule-icon">=</span><div><strong>Volg de tekens</strong><p>= betekent dezelfde symbolen. × betekent verschillende symbolen.</p></div></div>
+        <div class="legend" aria-label="Symbolen"><span><b>☀</b> zon</span><span><b>☾</b> maan</span></div>
+        <div class="fixed-legend"><span class="fixed-sample" aria-hidden="true"></span><span>Groene rand: vast startgegeven, staat al goed</span></div>
+        <p class="tip">Tip: klik een vakje meerdere keren om te wisselen: leeg → zon → maan → leeg. Je kunt ook de pijltoetsen en spatiebalk gebruiken.</p>
+      </aside>
+    </main>
+    <dialog class="success-dialog" id="success-dialog" aria-labelledby="success-title" aria-describedby="success-message">
+      <div class="success-content">
+        <span class="success-icon" aria-hidden="true">🎉</span>
+        <p class="eyebrow">Puzzel opgelost</p>
+        <h2 id="success-title">Gelukt!</h2>
+        <p id="success-message">Je hebt alle vakjes goed ingevuld.</p>
+        <div class="success-actions">
+          <button class="btn" id="success-close" type="button">Bekijk mijn oplossing</button>
+          <button class="btn" id="success-share" type="button">Deel uitslag</button>
+          <button class="btn primary" id="success-next" type="button">Nieuwe puzzel</button>
+        </div>
+      </div>
+    </dialog>
+  </div>
+  <script>
+    (() => {
+      const N = 6;
+      const patterns = [];
+      for (let mask = 0; mask < (1 << N); mask++) {
+        const row = Array.from({ length: N }, (_, i) => (mask >> i) & 1);
+        if (row.reduce((a, b) => a + b, 0) !== 3) continue;
+        if (row.some((v, i) => i > 1 && v === row[i - 1] && v === row[i - 2])) continue;
+        patterns.push(row);
+      }
+      const state = { puzzle: 0, level: 'easy', solution: [], given: [], values: [], links: [], seconds: 0, timer: null, hintAvailableAt: 0, hintTimer: null, liveMessageTimer: null, completed: false };
+      const board = document.querySelector('#board');
+      const status = document.querySelector('#status');
+      const successDialog = document.querySelector('#success-dialog');
+      const levelOrder = ['easy', 'medium', 'hard'];
+      const levelNames = { easy: 'Makkelijk', medium: 'Gemiddeld', hard: 'Pittig' };
+      const maxPuzzleNumber = 4294967295;
+      let randomState = 1;
+      function seedRandom(seed) { randomState = (seed >>> 0) || 0x6d2b79f5; }
+      function random() {
+        randomState ^= randomState << 13;
+        randomState ^= randomState >>> 17;
+        randomState ^= randomState << 5;
+        return (randomState >>> 0) / 4294967296;
+      }
+      const shuffle = arr => {
+        const result = [...arr];
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+      };
+
+      function puzzleUrl(id) {
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.hash = '';
+        url.searchParams.set('p', String(id));
+        return url.toString();
+      }
+
+      function updatePuzzleUrl(id) {
+        try { history.replaceState(null, '', puzzleUrl(id)); } catch (_) { /* Some browsers restrict URL updates on local files. */ }
+      }
+
+      function levelForPuzzleNumber(number) {
+        return levelOrder[(number - 1) % levelOrder.length];
+      }
+
+      function nextPuzzleNumber(level = state.level) {
+        let number = state.puzzle + 1;
+        while (number <= maxPuzzleNumber && levelForPuzzleNumber(number) !== level) number++;
+        return number <= maxPuzzleNumber ? number : levelOrder.indexOf(level) + 1;
+      }
+
+      function showSelectedLevel() {
+        document.querySelectorAll('[data-level]').forEach(button => {
+          button.setAttribute('aria-pressed', String(button.dataset.level === state.level));
+        });
+      }
+
+      function makeSolution() {
+        const grid = [];
+        function fill() {
+          if (grid.length === N) return true;
+          for (const row of shuffle(patterns)) {
+            let ok = true;
+            for (let c = 0; c < N; c++) {
+              const count = grid.reduce((sum, old) => sum + old[c], 0) + row[c];
+              if (count > 3) { ok = false; break; }
+              if (grid.length > 1 && grid.at(-1)[c] === row[c] && grid.at(-2)[c] === row[c]) { ok = false; break; }
+            }
+            if (!ok) continue;
+            grid.push(row);
+            if (fill()) return true;
+            grid.pop();
+          }
+          return false;
+        }
+        fill();
+        return grid;
+      }
+
+      function countSolutions(limit = 2) {
+        const rowOptions = Array.from({ length: N }, (_, r) => patterns.filter(row =>
+          row.every((value, c) => !state.given[r][c] || state.values[r][c] === value) &&
+          state.links.filter(link => link.dir === 'h' && link.r === r).every(link =>
+            (row[link.c] === row[link.c + 1]) === link.same
+          )
+        ));
+        const chosenRows = [];
+        const sunCounts = Array(N).fill(0);
+
+        function search(r) {
+          if (r === N) return 1;
+          let found = 0;
+          for (const row of rowOptions[r]) {
+            let valid = true;
+            for (let c = 0; c < N; c++) {
+              const nextCount = sunCounts[c] + (row[c] === 0 ? 1 : 0);
+              if (nextCount > 3 || nextCount + (N - r - 1) < 3) { valid = false; break; }
+              if (r > 1 && chosenRows[r - 1][c] === row[c] && chosenRows[r - 2][c] === row[c]) { valid = false; break; }
+            }
+            if (!valid) continue;
+            if (r > 0 && state.links.some(link => link.dir === 'v' && link.r === r - 1 && ((chosenRows[r - 1][link.c] === row[link.c]) !== link.same))) continue;
+
+            chosenRows.push(row);
+            for (let c = 0; c < N; c++) sunCounts[c] += row[c] === 0 ? 1 : 0;
+            found += search(r + 1);
+            for (let c = 0; c < N; c++) sunCounts[c] -= row[c] === 0 ? 1 : 0;
+            chosenRows.pop();
+            if (found >= limit) return limit;
+          }
+          return found;
+        }
+        return search(0);
+      }
+
+      function makeUnique() {
+        let solutions = countSolutions(2);
+        const remainingCells = shuffle(Array.from({ length: N * N }, (_, i) => i).filter(i => !state.given[Math.floor(i / N)][i % N]));
+        while (solutions > 1 && remainingCells.length) {
+          const i = remainingCells.pop();
+          const r = Math.floor(i / N), c = i % N;
+          state.given[r][c] = true;
+          state.values[r][c] = state.solution[r][c];
+          solutions = countSolutions(2);
+        }
+        // The generated full grid is always valid, so showing it guarantees a unique puzzle if a fallback is ever needed.
+        if (solutions !== 1) {
+          state.given = state.solution.map(row => row.map(() => true));
+          state.values = state.solution.map(row => [...row]);
+        }
+      }
+
+      function newPuzzle(puzzleNumber) {
+        if (successDialog.open) successDialog.close();
+        clearTimeout(state.liveMessageTimer);
+        state.liveMessageTimer = null;
+        state.puzzle = puzzleNumber ?? nextPuzzleNumber();
+        state.level = levelForPuzzleNumber(state.puzzle);
+        showSelectedLevel();
+        seedRandom(state.puzzle);
+        state.completed = false;
+        state.solution = makeSolution();
+        state.values = Array.from({ length: N }, () => Array(N).fill(-1));
+        const clues = { easy: 16, medium: 12, hard: 9 }[state.level];
+        state.given = Array.from({ length: N }, () => Array(N).fill(false));
+        shuffle(Array.from({ length: N * N }, (_, i) => i)).slice(0, clues).forEach(i => {
+          const r = Math.floor(i / N), c = i % N;
+          state.given[r][c] = true;
+          state.values[r][c] = state.solution[r][c];
+        });
+        const edgePool = [];
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+          if (c < N - 1) edgePool.push({ r, c, dir: 'h' });
+          if (r < N - 1) edgePool.push({ r, c, dir: 'v' });
+        }
+        const amount = { easy: 10, medium: 9, hard: 8 }[state.level];
+        state.links = shuffle(edgePool).slice(0, amount).map(edge => {
+          const r2 = edge.r + (edge.dir === 'v' ? 1 : 0), c2 = edge.c + (edge.dir === 'h' ? 1 : 0);
+          return { ...edge, same: state.solution[edge.r][edge.c] === state.solution[r2][c2] };
+        });
+        makeUnique();
+        state.seconds = 0;
+        clearInterval(state.timer);
+        state.timer = setInterval(() => { state.seconds++; }, 1000);
+        document.querySelector('#puzzle-number-value').textContent = String(state.puzzle);
+        document.querySelector('#puzzle-number').lastChild.textContent = ` · ${levelNames[state.level]} · 6 × 6 · één oplossing`;
+        document.querySelector('#puzzle-id').value = String(state.puzzle);
+        document.querySelector('#puzzle-load-help-number').textContent = String(state.puzzle);
+        document.querySelector('#share-result').hidden = true;
+        updatePuzzleUrl(state.puzzle);
+        status.className = 'status';
+        status.textContent = 'Zet je eerste zon of maan.';
+        render();
+      }
+
+      function render() {
+        const labels = document.querySelector('#column-labels');
+        labels.replaceChildren();
+        labels.append(document.createElement('span'));
+        'ABCDEF'.split('').forEach((letter, i) => {
+          const s = document.createElement('span'); s.textContent = letter; s.style.gridColumn = String(2 + i * 2); labels.append(s);
+        });
+        board.replaceChildren();
+        for (let r = 0; r < N; r++) {
+          const label = document.createElement('span'); label.className = 'row-label'; label.textContent = String(r + 1); label.style.gridRow = String(r * 2 + 1); label.style.gridColumn = '1'; board.append(label);
+          for (let c = 0; c < N; c++) {
+            const button = document.createElement('button');
+            const value = state.values[r][c];
+            button.type = 'button';
+            button.className = `tile${state.given[r][c] ? ' given' : ''}${value === 0 ? ' sun' : value === 1 ? ' moon' : ''}`;
+            button.innerHTML = value === 0
+              ? '<svg class="tile-icon" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><circle cx="24" cy="24" r="9.5"/><rect x="21.5" y="2.5" width="5" height="8" rx="2.5"/><rect x="21.5" y="37.5" width="5" height="8" rx="2.5"/><rect x="37.5" y="21.5" width="8" height="5" rx="2.5"/><rect x="2.5" y="21.5" width="8" height="5" rx="2.5"/><rect x="33.7" y="7.8" width="5" height="8" rx="2.5" transform="rotate(45 36.2 11.8)"/><rect x="9.3" y="32.2" width="5" height="8" rx="2.5" transform="rotate(45 11.8 36.2)"/><rect x="32.2" y="33.7" width="8" height="5" rx="2.5" transform="rotate(45 36.2 36.2)"/><rect x="7.8" y="9.3" width="8" height="5" rx="2.5" transform="rotate(45 11.8 11.8)"/></g></svg>'
+              : value === 1
+                ? '<svg class="tile-icon" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M34.8 32.8A17.2 17.2 0 0 1 17.2 6.2 18 18 0 1 0 41.8 30a17.3 17.3 0 0 1-7 2.8Z"/><circle cx="34" cy="11" r="2" fill="currentColor" opacity=".45"/><circle cx="40" cy="19" r="1.4" fill="currentColor" opacity=".45"/></svg>'
+                : '';
+            button.setAttribute('aria-label', `Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}: ${value < 0 ? 'leeg' : value === 0 ? 'zon' : 'maan'}${state.given[r][c] ? ', gegeven' : ''}`);
+            if (state.given[r][c]) button.title = 'Vast startgegeven — dit vakje staat al goed';
+            button.disabled = state.given[r][c];
+            button.style.gridRow = String(r * 2 + 1); button.style.gridColumn = String(c * 2 + 2);
+            button.addEventListener('click', () => {
+              state.values[r][c] = state.values[r][c] === 1 ? -1 : state.values[r][c] + 1;
+              status.className = 'status'; status.textContent = 'Puzzel loopt. Je kunt op elk moment controleren.';
+              render(); board.querySelector(`[aria-label^="Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}:"]`)?.focus();
+              showImmediateFeedback();
+              if (state.values.flat().every(value => value >= 0)) check();
+            });
+            board.append(button);
+            if (c < N - 1) addLink(r, c, 'h');
+            if (r < N - 1) addLink(r, c, 'v');
+          }
+        }
+        function addLink(r, c, dir) {
+          const link = state.links.find(item => item.r === r && item.c === c && item.dir === dir);
+          if (!link) return;
+          const span = document.createElement('span');
+          span.className = `constraint${link.same ? '' : ' different'}`;
+          span.textContent = link.same ? '=' : '×';
+          span.setAttribute('aria-label', link.same ? 'gelijke symbolen' : 'verschillende symbolen');
+          span.style.gridRow = String(r * 2 + (dir === 'v' ? 2 : 1));
+          span.style.gridColumn = String(c * 2 + (dir === 'h' ? 3 : 2));
+          board.append(span);
+        }
+      }
+
+      function cellSelector(r, c) {
+        return `[aria-label^="Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}:"]`;
+      }
+
+      function immediateIssues() {
+        const issues = [];
+        const describe = value => value === 0 ? 'zonnen' : 'manen';
+        for (let r = 0; r < N; r++) {
+          for (let c = 0; c < N - 2; c++) {
+            const value = state.values[r][c];
+            if (value >= 0 && value === state.values[r][c + 1] && value === state.values[r][c + 2]) {
+              issues.push({ message: `In rij ${r + 1} staan drie ${describe(value)} achter elkaar. Dat mag niet.`, cells: [[r, c], [r, c + 1], [r, c + 2]] });
+            }
+          }
+        }
+        for (let c = 0; c < N; c++) {
+          for (let r = 0; r < N - 2; r++) {
+            const value = state.values[r][c];
+            if (value >= 0 && value === state.values[r + 1][c] && value === state.values[r + 2][c]) {
+              issues.push({ message: `In kolom ${String.fromCharCode(65 + c)} staan drie ${describe(value)} onder elkaar. Dat mag niet.`, cells: [[r, c], [r + 1, c], [r + 2, c]] });
+            }
+          }
+        }
+        for (const link of state.links) {
+          const r2 = link.r + (link.dir === 'v' ? 1 : 0), c2 = link.c + (link.dir === 'h' ? 1 : 0);
+          const a = state.values[link.r][link.c], b = state.values[r2][c2];
+          if (a >= 0 && b >= 0 && (a === b) !== link.same) {
+            const first = `${String.fromCharCode(65 + link.c)}${link.r + 1}`;
+            const second = `${String.fromCharCode(65 + c2)}${r2 + 1}`;
+            issues.push({ message: `${link.same ? '=' : '×'} tussen ${first} en ${second} betekent dat de symbolen ${link.same ? 'gelijk' : 'verschillend'} moeten zijn.`, cells: [[link.r, link.c], [r2, c2]] });
+          }
+        }
+        for (let r = 0; r < N; r++) {
+          for (const value of [0, 1]) {
+            const cells = state.values[r].flatMap((v, c) => v === value ? [[r, c]] : []);
+            if (cells.length > 3) issues.push({ message: `Rij ${r + 1} heeft al ${cells.length} ${describe(value)}; er mogen er maar drie zijn.`, cells });
+          }
+        }
+        for (let c = 0; c < N; c++) {
+          for (const value of [0, 1]) {
+            const cells = state.values.flatMap((row, r) => row[c] === value ? [[r, c]] : []);
+            if (cells.length > 3) issues.push({ message: `Kolom ${String.fromCharCode(65 + c)} heeft al ${cells.length} ${describe(value)}; er mogen er maar drie zijn.`, cells });
+          }
+        }
+        return issues;
+      }
+
+      function showImmediateFeedback() {
+        clearTimeout(state.liveMessageTimer);
+        state.liveMessageTimer = null;
+        board.querySelectorAll('.tile.invalid').forEach(cell => cell.classList.remove('invalid'));
+        const issues = immediateIssues();
+        for (const issue of issues) {
+          for (const [r, c] of issue.cells) {
+            if (!state.given[r][c]) board.querySelector(cellSelector(r, c))?.classList.add('invalid');
+          }
+        }
+        if (!issues.length) return;
+        const message = issues[0].message;
+        status.className = 'status error';
+        status.textContent = message;
+        state.liveMessageTimer = setTimeout(() => {
+          if (status.textContent === message) {
+            status.className = 'status';
+            status.textContent = 'Puzzel loopt. Corrigeer het rood gemarkeerde vakje of de rode vakjes.';
+          }
+        }, 3200);
+      }
+
+      function check() {
+        const issues = [];
+        for (let r = 0; r < N; r++) {
+          const row = state.values[r];
+          for (let c = 0; c < N - 2; c++) if (row[c] >= 0 && row[c] === row[c + 1] && row[c] === row[c + 2]) issues.push(`drie gelijke naast elkaar in rij ${r + 1}`);
+          if (!row.includes(-1) && row.filter(x => x === 0).length !== 3) issues.push(`rij ${r + 1} heeft niet drie zonnen en drie manen`);
+        }
+        for (let c = 0; c < N; c++) {
+          const col = state.values.map(row => row[c]);
+          for (let r = 0; r < N - 2; r++) if (col[r] >= 0 && col[r] === col[r + 1] && col[r] === col[r + 2]) issues.push(`drie gelijke boven elkaar in kolom ${String.fromCharCode(65 + c)}`);
+          if (!col.includes(-1) && col.filter(x => x === 0).length !== 3) issues.push(`kolom ${String.fromCharCode(65 + c)} heeft niet drie zonnen en drie manen`);
+        }
+        for (const link of state.links) {
+          const r2 = link.r + (link.dir === 'v' ? 1 : 0), c2 = link.c + (link.dir === 'h' ? 1 : 0);
+          const a = state.values[link.r][link.c], b = state.values[r2][c2];
+          if (a >= 0 && b >= 0 && (a === b) !== link.same) issues.push('een aanwijzing tussen vakjes klopt niet');
+        }
+        const filled = state.values.flat().every(x => x >= 0);
+        if (issues.length) {
+          status.className = 'status error'; status.textContent = `Nog niet: ${issues[0]}. Kijk ook naar de roze vakjes.`;
+          state.values.forEach((row, r) => row.forEach((value, c) => {
+            const cell = board.querySelector(`[aria-label^="Rij ${r + 1}, kolom ${String.fromCharCode(65 + c)}:"]`);
+            if (!cell) return;
+            const rowTrip = c > 1 && value >= 0 && value === row[c - 1] && value === row[c - 2];
+            const colTrip = r > 1 && value >= 0 && value === state.values[r - 1][c] && value === state.values[r - 2][c];
+            cell.classList.toggle('wrong', rowTrip || colTrip);
+          }));
+        } else if (filled) {
+          clearInterval(state.timer);
+          status.className = 'status good'; status.textContent = `Helemaal goed! Opgelost in ${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, '0')}. Lekker bezig!`;
+          if (!state.completed) {
+            state.completed = true;
+            document.querySelector('#share-result').hidden = false;
+            document.querySelector('#success-message').textContent = `Je hebt alle vakjes goed ingevuld in ${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, '0')}.`;
+            successDialog.showModal();
+          }
+        } else {
+          status.className = 'status'; status.textContent = 'Tot nu toe klopt alles. Vul de rest van het bord in!';
+        }
+      }
+
+      function hintForCell(r, c) {
+        const value = state.solution[r][c];
+        const reasons = [];
+        const row = state.values[r];
+        const col = state.values.map(line => line[c]);
+        const symbol = value === 0 ? 'zon' : 'maan';
+        if (row.filter(x => x === 0).length === 3 && value === 1) reasons.push(`Rij ${r + 1} heeft al drie zonnen. Er mogen er precies drie zijn; een extra zon zou er vier maken. Daarom moet ${String.fromCharCode(65 + c)}${r + 1} een maan zijn.`);
+        if (row.filter(x => x === 1).length === 3 && value === 0) reasons.push(`Rij ${r + 1} heeft al drie manen. Er mogen er precies drie zijn; een extra maan zou er vier maken. Daarom moet ${String.fromCharCode(65 + c)}${r + 1} een zon zijn.`);
+        if (col.filter(x => x === 0).length === 3 && value === 1) reasons.push(`Kolom ${String.fromCharCode(65 + c)} heeft al drie zonnen. Er mogen er precies drie zijn; een extra zon zou er vier maken. Daarom moet ${String.fromCharCode(65 + c)}${r + 1} een maan zijn.`);
+        if (col.filter(x => x === 1).length === 3 && value === 0) reasons.push(`Kolom ${String.fromCharCode(65 + c)} heeft al drie manen. Er mogen er precies drie zijn; een extra maan zou er vier maken. Daarom moet ${String.fromCharCode(65 + c)}${r + 1} een zon zijn.`);
+        for (const link of state.links) {
+          const r2 = link.r + (link.dir === 'v' ? 1 : 0), c2 = link.c + (link.dir === 'h' ? 1 : 0);
+          const isHere = (link.r === r && link.c === c) || (r2 === r && c2 === c);
+          if (!isHere) continue;
+          const otherR = link.r === r && link.c === c ? r2 : link.r;
+          const otherC = link.r === r && link.c === c ? c2 : link.c;
+          const other = state.values[otherR][otherC];
+          if (other < 0) continue;
+          const same = link.same ? 'hetzelfde symbool' : 'het andere symbool';
+          const otherCell = `${String.fromCharCode(65 + otherC)}${otherR + 1}`;
+          const thisCell = `${String.fromCharCode(65 + c)}${r + 1}`;
+          reasons.push(`Tussen ${thisCell} en ${otherCell} staat ${link.same ? '=' : '×'}, dus ze moeten ${same} zijn. ${otherCell} is een ${other === 0 ? 'zon' : 'maan'}; daarom moet ${thisCell} een ${symbol} zijn.`);
+        }
+        for (const dir of ['h', 'v']) {
+          for (let start = -2; start <= 0; start++) {
+            const cells = [0, 1, 2].map(k => ({ r: r + (dir === 'v' ? start + k : 0), c: c + (dir === 'h' ? start + k : 0) }));
+            if (!cells.some(p => p.r === r && p.c === c) || cells.some(p => p.r < 0 || p.r >= N || p.c < 0 || p.c >= N)) continue;
+            const others = cells.filter(p => p.r !== r || p.c !== c).map(p => state.values[p.r][p.c]);
+            if (others[0] >= 0 && others[0] === others[1] && value !== others[0]) {
+              const otherSymbol = others[0] === 0 ? 'zonnen' : 'manen';
+              const positions = cells.filter(p => p.r !== r || p.c !== c).map(p => `${String.fromCharCode(65 + p.c)}${p.r + 1}`);
+              reasons.push(`${positions[0]} en ${positions[1]} zijn allebei ${otherSymbol}. Als dit vakje ook een ${others[0] === 0 ? 'zon' : 'maan'} was, stonden er drie gelijke symbolen achter elkaar. Dat mag niet, dus dit vakje moet een ${symbol} zijn.`);
+            }
+          }
+        }
+        return reasons[0];
+      }
+
+      function giveHint() {
+        if (Date.now() < state.hintAvailableAt) return;
+        const candidates = [];
+        state.values.forEach((row, r) => row.forEach((v, c) => {
+          if (v < 0) {
+            const explanation = hintForCell(r, c);
+            if (explanation) candidates.push({ r, c, explanation });
+          }
+        }));
+        if (!candidates.length) {
+          status.className = 'status';
+          status.textContent = 'Ik zie nog geen vakje dat ik met één directe regel kan bewijzen. Vul eerst nog een zet in of controleer je ingevulde vakjes.';
+          return;
+        }
+        const { r, c, explanation } = candidates[Math.floor(Math.random() * candidates.length)];
+        state.values[r][c] = state.solution[r][c];
+        render();
+        status.className = 'status';
+        status.textContent = `Waarom ${String.fromCharCode(65 + c)}${r + 1}? ${explanation}`;
+        startHintCooldown();
+        showImmediateFeedback();
+        if (state.values.flat().every(value => value >= 0)) check();
+      }
+
+      function startHintCooldown() {
+        const button = document.querySelector('#hint');
+        state.hintAvailableAt = Date.now() + 5000;
+        clearInterval(state.hintTimer);
+        const update = () => {
+          const remaining = Math.ceil((state.hintAvailableAt - Date.now()) / 1000);
+          if (remaining <= 0) {
+            clearInterval(state.hintTimer);
+            state.hintTimer = null;
+            button.disabled = false;
+            button.textContent = 'Geef een hint';
+            return;
+          }
+          button.disabled = true;
+          button.textContent = `Hint over ${remaining}s`;
+        };
+        update();
+        state.hintTimer = setInterval(update, 200);
+      }
+
+      function elapsedText() {
+        return `${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, '0')}`;
+      }
+
+      async function shareResult() {
+        if (!state.completed) return;
+        const link = puzzleUrl(state.puzzle);
+        const isHosted = location.protocol === 'https:' || location.protocol === 'http:';
+        const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
+        const shareText = isHosted
+          ? `${resultText}\nDenk je dat je sneller bent? Speel dezelfde puzzel: ${link}`
+          : `${resultText}\nOpen hetzelfde Zon of maan-bestand en laad puzzelnummer ${state.puzzle} om dezelfde puzzel te spelen.`;
+        const message = shareText;
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: 'Zon of maan — puzzeluitdaging', text: shareText, ...(isHosted ? { url: link } : {}) });
+            status.className = 'status good';
+            status.textContent = 'Uitslag gedeeld.';
+          } else {
+            await navigator.clipboard.writeText(message);
+            status.className = 'status good';
+            status.textContent = 'Uitslag gekopieerd om te delen.';
+          }
+        } catch (error) {
+          if (error.name === 'AbortError') return;
+          try {
+            await navigator.clipboard.writeText(message);
+            status.className = 'status good';
+            status.textContent = 'Uitslag gekopieerd om te delen.';
+          } catch (_) {
+            window.prompt('Kopieer je uitslag om te delen:', message);
+          }
+        }
+      }
+
+      document.querySelector('#check').addEventListener('click', check);
+      document.querySelector('#new-puzzle').addEventListener('click', () => newPuzzle());
+      document.querySelector('#restart-puzzle').addEventListener('click', () => newPuzzle(state.puzzle));
+      document.querySelector('#share-result').addEventListener('click', shareResult);
+      document.querySelector('#success-share').addEventListener('click', shareResult);
+      document.querySelector('#load-puzzle-form').addEventListener('submit', event => {
+        event.preventDefault();
+        const puzzleNumber = Number(document.querySelector('#puzzle-id').value);
+        if (!Number.isSafeInteger(puzzleNumber) || puzzleNumber < 1 || puzzleNumber > 4294967295) {
+          status.className = 'status error'; status.textContent = 'Vul een puzzelnummer in tussen 1 en 4.294.967.295.';
+          return;
+        }
+        newPuzzle(puzzleNumber);
+      });
+      document.querySelector('#success-close').addEventListener('click', () => successDialog.close());
+      document.querySelector('#success-next').addEventListener('click', () => newPuzzle());
+      document.querySelector('#hint').addEventListener('click', giveHint);
+      document.querySelectorAll('[data-level]').forEach(button => button.addEventListener('click', () => {
+        state.level = button.dataset.level;
+        document.querySelectorAll('[data-level]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+        newPuzzle();
+      }));
+      document.addEventListener('keydown', event => {
+        if (event.key !== ' ' || !event.target.classList.contains('tile') || event.target.disabled) return;
+        event.preventDefault(); event.target.click();
+      });
+      const requestedPuzzle = new URLSearchParams(location.search).get('p');
+      const initialPuzzle = requestedPuzzle && /^\d+$/.test(requestedPuzzle) ? Number(requestedPuzzle) : 1;
+      newPuzzle(Number.isSafeInteger(initialPuzzle) && initialPuzzle >= 1 && initialPuzzle <= 4294967295 ? initialPuzzle : 1);
+    })();
+  </script>
+</body>
+</html>
