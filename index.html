@@ -625,11 +625,11 @@
         if (!state.completed) return;
         const link = puzzleUrl(state.puzzle);
         const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
-        const shareText = `${resultText}\nDenk je dat je sneller bent? Speel dezelfde puzzel: ${link}`;
+        const shareText = `${resultText}\nDenk je dat je sneller bent?\nSpeel dezelfde puzzel: ${link}`;
         const message = shareText;
         try {
           if (navigator.share) {
-            await navigator.share({ title: 'Zon of maan — puzzeluitdaging', text: shareText });
+            await navigator.share({ text: shareText });
             status.className = 'status good';
             status.textContent = 'Uitslag gedeeld.';
           } else {
