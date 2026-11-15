@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <meta name="description" content="Over Zon of maan: lees hoe het puzzelspel werkt en welke gebruiksstatistieken we meten.">
+  <title>Over Zon of maan</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-94LT11B5H2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){window.dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-94LT11B5H2', {
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false
+    });
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202b28;
+      --muted: #71807a;
+      --paper: #f6f5f0;
+      --card: #fffefa;
+      --line: #e6e8df;
+      --green: #176c58;
+      font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", Avenir, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--paper);
+      background-image: radial-gradient(#d9ded4 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+    }
+    .page { width: min(100% - 32px, 760px); margin: 0 auto; padding: 32px 0 48px; }
+    .card { padding: clamp(22px, 5vw, 40px); border: 1px solid rgba(45, 64, 55, .09); border-radius: 24px; background: var(--card); box-shadow: 0 12px 36px rgba(43, 59, 48, .07); }
+    .back { color: var(--green); font-size: 14px; font-weight: 750; text-decoration: none; }
+    .eyebrow { margin: 26px 0 8px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(30px, 7vw, 42px); letter-spacing: -.055em; line-height: 1.08; }
+    .intro { margin: 12px 0 26px; color: var(--muted); font-size: 15px; line-height: 1.65; }
+    section { padding-top: 20px; border-top: 1px solid var(--line); }
+    h2 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.03em; }
+    p { margin: 0 0 14px; color: #53625b; font-size: 14px; line-height: 1.7; }
+    a { color: var(--green); }
+    .links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; font-size: 14px; font-weight: 700; }
+    .version { margin: 22px 0 0; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <article class="card">
+      <a class="back" href="./">← Terug naar het spel</a>
+      <p class="eyebrow">Over het spel</p>
+      <h1>Over Zon of maan</h1>
+      <p class="intro">Zon of maan is een gratis logicapuzzel. Vul het bord met zonnen en manen en gebruik de aanwijzingen om de oplossing te vinden.</p>
+
+      <section>
+        <h2>Hoe werkt het?</h2>
+        <p>Elke puzzel heeft een bord van 6 × 6 vakjes. Iedere rij en kolom bevat drie zonnen en drie manen. Er mogen nergens drie gelijke symbolen direct naast elkaar staan. De tekens tussen vakjes geven aan of die symbolen gelijk of verschillend moeten zijn.</p>
+        <p>Kies een moeilijkheid, vraag zo nodig een hint of laad een puzzelnummer. Na het oplossen kun je je uitslag delen en iemand uitdagen voor dezelfde puzzel.</p>
+      </section>
+
+      <section>
+        <h2>Gebruiksstatistieken</h2>
+        <p>We gebruiken Google Analytics 4 (GA4) om te zien hoe het spel wordt gebruikt en wat we kunnen verbeteren. GA4 meet onder andere paginaweergaven, scrollen, uitgaande links en formulierinteracties. Daarnaast meten we wanneer een puzzel start, een hint of controle wordt gebruikt, een puzzel wordt opgelost en een uitslag wordt gedeeld.</p>
+        <p>Bij spelgebeurtenissen sturen we het puzzelnummer en de moeilijkheid mee. Bij een opgeloste puzzel meten we ook de oplostijd en het aantal hints, zetten en controles. We sturen geen namen, e-mailadressen of ingevulde borden en antwoorden mee. Advertentiesignalen en advertentiepersonalisatie staan uit.</p>
+      </section>
+
+      <section>
+        <h2>Cookies en IP-adressen</h2>
+        <p>GA4 gebruikt first-party cookies om bezoekers en sessies van elkaar te onderscheiden. Google geeft aan dat Analytics IP-adressen van bezoekers uit de EU niet opslaat. Het IP-adres wordt bij het verzamelen wel tijdelijk gebruikt om een globale locatie af te leiden en daarna verwijderd. <a href="https://support.google.com/analytics/answer/12017362?hl=nl">Lees hoe Google met Analytics-gegevens omgaat.</a></p>
+        <p>Je kunt Google Analytics uitschakelen met de <a href="https://tools.google.com/dlpage/gaoptout">Google Analytics Opt-out Browser Add-on</a>.</p>
+      </section>
+
+      <nav class="links" aria-label="Meer informatie">
+        <a href="./">← Terug naar het spel</a>
+        <a href="https://github.com/Elmoxx/zon-of-maan">Bekijk het project op GitHub</a>
+      </nav>
+      <p class="version">Zon of maan · v0.1.5</p>
+    </article>
+  </div>
+</body>
+</html>
