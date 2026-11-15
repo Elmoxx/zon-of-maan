@@ -132,7 +132,7 @@
   <div class="page">
     <header>
       <div class="brand"><span class="brand-mark" aria-hidden="true">☼</span><span>Zon of maan</span></div>
-      <span class="tag">Een klein dagelijks denkspel (v0.1.1)</span>
+      <span class="tag">Een klein dagelijks denkspel (v0.1.2)</span>
     </header>
     <main>
       <section class="card game" aria-labelledby="title">
@@ -483,21 +483,21 @@
         const issues = immediateIssues();
         if (!issues.length) return;
         const message = issues[0].message;
-        status.className = 'status error';
-        status.textContent = message;
         const invalidCells = issues.flatMap(issue => issue.cells);
         state.invalidTimer = setTimeout(() => {
           for (const [r, c] of invalidCells) {
             if (!state.given[r][c]) board.querySelector(cellSelector(r, c))?.classList.add('invalid');
           }
           state.invalidTimer = null;
+          status.className = 'status error';
+          status.textContent = message;
+          state.liveMessageTimer = setTimeout(() => {
+            if (status.textContent === message) {
+              status.className = 'status';
+              status.textContent = 'Puzzel loopt. Corrigeer het rood gemarkeerde vakje of de rode vakjes.';
+            }
+          }, 3200);
         }, 500);
-        state.liveMessageTimer = setTimeout(() => {
-          if (status.textContent === message) {
-            status.className = 'status';
-            status.textContent = 'Puzzel loopt. Corrigeer het rood gemarkeerde vakje of de rode vakjes.';
-          }
-        }, 3200);
       }
 
       function check() {
