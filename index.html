@@ -144,7 +144,7 @@
   <div class="page">
     <header>
       <div class="brand"><span class="brand-mark" aria-hidden="true">☼</span><span>Zon of maan</span></div>
-      <span class="tag">Een klein dagelijks denkspel (v0.1.6)</span>
+      <span class="tag">Een klein dagelijks denkspel (v0.1.7)</span>
     </header>
     <main>
       <section class="card game" aria-labelledby="title">
@@ -678,17 +678,21 @@
         const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
         const shareText = `${resultText}\nDenk je dat je sneller bent?\nSpeel dezelfde puzzel: ${link}`;
         const message = shareText;
+        const isFirefox = /Firefox\//.test(navigator.userAgent);
         try {
-          if (navigator.share) {
+          if (navigator.share && !isFirefox) {
             await navigator.share({ text: shareText });
             trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'native' });
             status.className = 'status good';
             status.textContent = 'Uitslag gedeeld.';
           } else {
             await navigator.clipboard.writeText(message);
-            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'clipboard' });
+            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: isFirefox ? 'clipboard_firefox' : 'clipboard' });
             status.className = 'status good';
             status.textContent = 'Uitslag gekopieerd om te delen.';
+            if (successDialog.open) {
+              document.querySelector('#success-message').textContent = 'Je uitslag is gekopieerd. Plak hem in een bericht om te delen.';
+            }
           }
         } catch (error) {
           if (error.name === 'AbortError') {
