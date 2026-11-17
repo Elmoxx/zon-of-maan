@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f5f0">
   <meta name="description" content="Speel een kort en leuk logicapuzzeltje met zon en maan. Kies makkelijk of moeilijk, deel je succes en daag iemand uit voor dezelfde puzzel.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Zon of maan">
   <title>☀️ Zon of maan 🌙 Logicapuzzel, veel plezier!</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-94LT11B5H2"></script>
   <script>
@@ -109,6 +114,13 @@
     .success-content h2 { margin: 0; font-size: 34px; letter-spacing: -.06em; }
     .success-content p:not(.eyebrow) { margin: 9px 0 21px; color: var(--muted); line-height: 1.5; }
     .success-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+    .install-card { margin-top: 14px; padding: 14px; border: 1px solid #d7e1f2; border-radius: 12px; background: #f3f6fc; text-align: left; }
+    .install-card[hidden] { display: none; }
+    .install-card p { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.5; }
+    .install-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+    .install-actions .btn { min-width: 120px; min-height: 36px; padding: 0 14px; font-size: 12px; }
+    .install-actions .btn:not(.primary) { border-color: transparent; background: transparent; color: var(--muted); }
+    #install-help { margin-top: 9px; color: var(--muted); }
     .puzzle-tools { display: grid; justify-items: center; gap: 5px; margin-top: 12px; }
     .puzzle-control-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
     .puzzle-load-help { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; text-align: center; }
@@ -144,7 +156,7 @@
   <div class="page">
     <header>
       <div class="brand"><span class="brand-mark" aria-hidden="true">☼</span><span>Zon of maan</span></div>
-      <span class="tag">Een klein dagelijks denkspel (v0.1.7)</span>
+      <span class="tag">Een klein dagelijks denkspel (v0.1.8)</span>
     </header>
     <main>
       <section class="card game" aria-labelledby="title">
@@ -204,6 +216,14 @@
           <button class="btn" id="success-share" type="button">Deel uitslag</button>
           <button class="btn primary" id="success-next" type="button">Nieuwe puzzel</button>
         </div>
+        <section class="install-card" id="install-card" aria-label="Zet op je beginscherm" hidden>
+          <p>Zet Zon of maan op je beginscherm en speel dagelijks.</p>
+          <div class="install-actions">
+            <button class="btn primary" id="install-app" type="button">Toevoegen</button>
+            <button class="btn" id="install-later" type="button">Niet nu</button>
+          </div>
+          <p id="install-help" aria-live="polite" hidden></p>
+        </section>
       </div>
     </dialog>
   </div>
@@ -678,38 +698,62 @@
         const resultText = `Zon of maan — puzzel ${state.puzzle}, opgelost in ${elapsedText()}!`;
         const shareText = `${resultText}\nDenk je dat je sneller bent?\nSpeel dezelfde puzzel: ${link}`;
         const message = shareText;
-        const isFirefox = /Firefox\//.test(navigator.userAgent);
         try {
-          if (navigator.share && !isFirefox) {
-            await navigator.share({ text: shareText });
-            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'native' });
-            status.className = 'status good';
-            status.textContent = 'Uitslag gedeeld.';
-          } else {
-            await navigator.clipboard.writeText(message);
-            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: isFirefox ? 'clipboard_firefox' : 'clipboard' });
-            status.className = 'status good';
-            status.textContent = 'Uitslag gekopieerd om te delen.';
-            if (successDialog.open) {
-              document.querySelector('#success-message').textContent = 'Je uitslag is gekopieerd. Plak hem in een bericht om te delen.';
-            }
+          await navigator.clipboard.writeText(message);
+          trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'clipboard' });
+          status.className = 'status good';
+          status.textContent = 'Gekopieerd naar klembord!';
+          if (successDialog.open) {
+            document.querySelector('#success-message').textContent = 'Gekopieerd naar klembord! Open een app en plak je uitslag in een bericht.';
           }
         } catch (error) {
-          if (error.name === 'AbortError') {
-            trackEvent('share_cancelled', { puzzle_id: state.puzzle, difficulty: state.level });
-            return;
-          }
-          try {
-            await navigator.clipboard.writeText(message);
-            trackEvent('share_completed', { puzzle_id: state.puzzle, difficulty: state.level, share_method: 'clipboard_fallback' });
-            status.className = 'status good';
-            status.textContent = 'Uitslag gekopieerd om te delen.';
-          } catch (_) {
-            trackEvent('share_fallback_shown', { puzzle_id: state.puzzle, difficulty: state.level });
-            window.prompt('Kopieer je uitslag om te delen:', message);
+          trackEvent('share_fallback_shown', { puzzle_id: state.puzzle, difficulty: state.level });
+          window.prompt('Kopieer je uitslag om te delen:', message);
+          if (successDialog.open) {
+            document.querySelector('#success-message').textContent = 'Selecteer en kopieer je uitslag om hem te delen.';
           }
         }
       }
+
+      let installPrompt = null;
+      const installCard = document.querySelector('#install-card');
+      const installHelp = document.querySelector('#install-help');
+      const isInstalled = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      if (!isInstalled()) installCard.hidden = false;
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        installPrompt = event;
+        if (!isInstalled()) installCard.hidden = false;
+      });
+      window.addEventListener('appinstalled', () => {
+        installPrompt = null;
+        installCard.hidden = true;
+      });
+      document.querySelector('#install-later').addEventListener('click', () => { installCard.hidden = true; });
+      document.querySelector('#install-app').addEventListener('click', async () => {
+        if (installPrompt) {
+          await installPrompt.prompt();
+          const choice = await installPrompt.userChoice;
+          trackEvent('install_prompt_result', { outcome: choice.outcome });
+          installPrompt = null;
+          return;
+        }
+        const ua = navigator.userAgent;
+        let instructions;
+        if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+          instructions = 'Tik in Safari op Deel en kies ‘Zet op beginscherm’.';
+        } else if (/Firefox\//.test(ua) && /Android/.test(ua)) {
+          instructions = 'Open het Firefox-menu en kies ‘Installeren’ of ‘Toevoegen aan startscherm’.';
+        } else if (/Firefox\//.test(ua)) {
+          instructions = 'Firefox op de Mac ondersteunt installeren niet. Open deze site in Safari en kies Archief > Voeg toe aan Dock.';
+        } else if (/Android/.test(ua)) {
+          instructions = 'Open het browsermenu en kies ‘Toevoegen aan startscherm’.';
+        } else {
+          instructions = 'Open deze site in Safari en kies Archief > Voeg toe aan Dock, of open hem op je telefoon om hem aan je beginscherm toe te voegen.';
+        }
+        installHelp.textContent = instructions;
+        installHelp.hidden = false;
+      });
 
       document.querySelector('#check').addEventListener('click', check);
       document.querySelector('#new-puzzle').addEventListener('click', () => newPuzzle(undefined, 'next'));
@@ -738,8 +782,10 @@
         event.preventDefault(); event.target.click();
       });
       const requestedPuzzle = new URLSearchParams(location.search).get('p');
-      const initialPuzzle = requestedPuzzle && /^\d+$/.test(requestedPuzzle) ? Number(requestedPuzzle) : 1;
-      newPuzzle(Number.isSafeInteger(initialPuzzle) && initialPuzzle >= 1 && initialPuzzle <= 4294967295 ? initialPuzzle : 1, 'initial');
+      const requestedNumber = requestedPuzzle && /^\d+$/.test(requestedPuzzle) ? Number(requestedPuzzle) : NaN;
+      const hasValidRequestedPuzzle = Number.isSafeInteger(requestedNumber) && requestedNumber >= 1 && requestedNumber <= 4294967295;
+      const initialPuzzle = hasValidRequestedPuzzle ? requestedNumber : Math.floor(Math.random() * 1000) + 1;
+      newPuzzle(initialPuzzle, 'initial');
     })();
   </script>
 </body>
